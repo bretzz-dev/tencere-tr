@@ -304,28 +304,23 @@ export default function App() {
                                     <span className="text-xs font-black text-stone-600 flex items-center gap-1 uppercase tracking-wider"><Coins size={14} className="text-orange-500"/> Kredi Kontrolü</span>
                                     <span className="font-black text-2xl text-stone-800">{s.orderCredit} <span className="text-[10px] text-stone-400 font-bold uppercase">Hakkı</span></span>
                                 </div>
-                                <div className="flex flex-wrap gap-1.5 mb-3">
-                                    <button onClick={() => updateSellerCredit(s.id, 5)} className="flex-1 min-w-[40px] py-1.5 bg-white border border-stone-200 hover:border-orange-300 hover:text-orange-600 rounded-lg text-xs font-bold transition-colors">+5</button>
-                                    <button onClick={() => updateSellerCredit(s.id, 10)} className="flex-1 min-w-[40px] py-1.5 bg-white border border-stone-200 hover:border-orange-300 hover:text-orange-600 rounded-lg text-xs font-bold transition-colors">+10</button>
-                                    <button onClick={() => updateSellerCredit(s.id, 20)} className="flex-1 min-w-[40px] py-1.5 bg-white border border-stone-200 hover:border-orange-300 hover:text-orange-600 rounded-lg text-xs font-bold transition-colors">+20</button>
-                                    <button onClick={() => updateSellerCredit(s.id, 50)} className="flex-1 min-w-[40px] py-1.5 bg-white border border-stone-200 hover:border-orange-300 hover:text-orange-600 rounded-lg text-xs font-bold transition-colors">+50</button>
-                                    <button onClick={() => updateSellerCredit(s.id, 100)} className="flex-1 min-w-[40px] py-1.5 bg-white border border-stone-200 hover:border-orange-300 hover:text-orange-600 rounded-lg text-xs font-bold transition-colors">+100</button>
+                                
+                                {/* Ekleme Butonları (+) */}
+                                <div className="flex gap-1.5 mb-2">
+                                    <button onClick={() => updateSellerCredit(s.id, 1)} className="flex-1 py-2 bg-green-50 border border-green-200 text-green-700 hover:bg-green-500 hover:text-white rounded-xl text-xs font-black transition-colors">+1</button>
+                                    <button onClick={() => updateSellerCredit(s.id, 10)} className="flex-1 py-2 bg-green-50 border border-green-200 text-green-700 hover:bg-green-500 hover:text-white rounded-xl text-xs font-black transition-colors">+10</button>
+                                    <button onClick={() => updateSellerCredit(s.id, 20)} className="flex-1 py-2 bg-green-50 border border-green-200 text-green-700 hover:bg-green-500 hover:text-white rounded-xl text-xs font-black transition-colors">+20</button>
+                                    <button onClick={() => updateSellerCredit(s.id, 50)} className="flex-1 py-2 bg-green-50 border border-green-200 text-green-700 hover:bg-green-500 hover:text-white rounded-xl text-xs font-black transition-colors">+50</button>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => updateSellerCredit(s.id, -1)} className="flex-1 py-2 bg-stone-200 text-stone-700 hover:bg-red-100 hover:text-red-700 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-colors"><Minus size={14}/> 1 Düşür</button>
-                                    <button onClick={() => updateSellerCredit(s.id, 1)} className="flex-1 py-2 bg-stone-200 text-stone-700 hover:bg-green-100 hover:text-green-700 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition-colors"><Plus size={14}/> 1 Ekle</button>
+
+                                {/* Çıkarma Butonları (-) */}
+                                <div className="flex gap-1.5">
+                                    <button onClick={() => updateSellerCredit(s.id, -1)} className="flex-1 py-2 bg-red-50 border border-red-200 text-red-700 hover:bg-red-500 hover:text-white rounded-xl text-xs font-black transition-colors">-1</button>
+                                    <button onClick={() => updateSellerCredit(s.id, -10)} className="flex-1 py-2 bg-red-50 border border-red-200 text-red-700 hover:bg-red-500 hover:text-white rounded-xl text-xs font-black transition-colors">-10</button>
+                                    <button onClick={() => updateSellerCredit(s.id, -20)} className="flex-1 py-2 bg-red-50 border border-red-200 text-red-700 hover:bg-red-500 hover:text-white rounded-xl text-xs font-black transition-colors">-20</button>
+                                    <button onClick={() => updateSellerCredit(s.id, -50)} className="flex-1 py-2 bg-red-50 border border-red-200 text-red-700 hover:bg-red-500 hover:text-white rounded-xl text-xs font-black transition-colors">-50</button>
                                 </div>
                              </div>
-
-                             {s.status === 'approved' ? (
-                                 <button onClick={() => handleToggleSellerStatus(s.id, s.status)} className="w-full py-3 bg-red-50 text-red-600 border border-red-200 text-xs font-black rounded-xl flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-colors"><Ban size={16}/> Dükkanı Yasakla (Kapat)</button>
-                             ) : (
-                                 <button onClick={() => handleToggleSellerStatus(s.id, s.status)} className="w-full py-3 bg-green-50 text-green-600 border border-green-200 text-xs font-black rounded-xl flex items-center justify-center gap-2 hover:bg-green-500 hover:text-white transition-colors"><CheckCircle size={16}/> Yasağı Kaldır ve Onayla</button>
-                             )}
-                          </div>
-                      ))
-                  )}
-               </div>
            )}
 
            {adminView === 'credits' && (
