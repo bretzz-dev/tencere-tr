@@ -70,6 +70,7 @@ export default function App() {
   const [selDist, setSelDist] = useState(localStorage.getItem('tencere_dist') || 'İzmit');
   const [selectedSellerId, setSelectedSellerId] = useState(null); 
   const [isApplying, setIsApplying] = useState(false);
+  const [registerLocation, setRegisterLocation] = useState(null); 
 
   const [sellerView, setSellerView] = useState('dashboard');
   const [selectedCategory, setSelectedCategory] = useState('Ana Yemek');
@@ -202,16 +203,46 @@ export default function App() {
 
   const handleBecomeSeller = async (e) => {
     e.preventDefault(); if (!currentUser) return; const formData = new FormData(e.target);
-    const newSeller = { id: 'sel_' + Date.now(), userId: currentUser.uid, brandName: formData.get('brandName'), city: formData.get('city'), district: formData.get('district'), neighborhood: formData.get('neighborhood'), address: formData.get('address'), description: formData.get('description'), status: 'approved', orderCredit: 10, rating: 5.0, reviewCount: 0, featured: false, deliveryMethod: formData.get('deliveryMethod'), isOpen: true, lastBrandNameChange: Date.now(), workingHours: '08:00 - 20:00', logoUrl: '', createdAt: new Date().toISOString() };
+    const newSeller = { 
+        id: 'sel_' + Date.now(), 
+        userId: currentUser.uid, 
+        brandName: formData.get('brandName'), 
+        city: formData.get('city'), 
+        district: formData.get('district'), 
+        neighborhood: formData.get('neighborhood'), 
+        address: formData.get('address'), 
+        description: formData.get('description'), 
+        location: registerLocation || null, 
+        status: 'approved', 
+        orderCredit: 10, 
+        rating: 5.0, 
+        reviewCount: 0, 
+        featured: false, 
+        deliveryMethod: formData.get('deliveryMethod'), 
+        isOpen: true, 
+        lastBrandNameChange: Date.now(), 
+        workingHours: '08:00 - 20:00', 
+        logoUrl: '', 
+        createdAt: new Date().toISOString() 
+    };
     api.saveDb({ ...db, sellers: [...db.sellers, newSeller] });
     const updatedUser = { ...userData, role: 'seller' };
     await setDoc(doc(firestore, 'users', currentUser.uid), updatedUser);
-    setUserData(updatedUser); showToast("Mağazanız açıldı!"); setRole('seller'); 
+    setUserData(updatedUser); 
+    setRegisterLocation(null); 
+    showToast("Mağazanız açıldı!"); 
+    setRole('seller'); 
   };
 
-  // ============================================================================
-  // YÖNETİCİ (ADMIN) PANELİ - GÜÇLENDİRİLMİŞ KONTROL MERKEZİ
-  // ============================================================================
+  const handleGetRegisterLocation = () => {
+    if (!navigator.geolocation) { showToast("Tarayıcınız konum özelliğini desteklemiyor.", "error"); return; }
+    showToast("Konum aranıyor, lütfen izin verin...");
+    navigator.geolocation.getCurrentPosition(
+        pos => { setRegisterLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); showToast("Harita konumu başarıyla işaretlendi!"); },
+        () => { showToast("Konum alınamadı. Cihaz izinlerini kontrol edin.", "error"); }
+    );
+  };
+
   const renderAdminApp = () => {
     const completedOrders = db.orders.filter(o => o.status === 'completed');
     const totalRevenue = completedOrders.reduce((sum, o) => sum + o.totalPrice, 0);
@@ -242,7 +273,6 @@ export default function App() {
     const updateSellerCredit = (sellerId, delta) => {
         const updatedSellers = db.sellers.map(s => {
             if (s.id === sellerId) {
-                // Kredi eksiye düşmesin diye Math.max kullanıyoruz
                 const newCredit = Math.max(0, (s.orderCredit || 0) + delta);
                 return { ...s, orderCredit: newCredit };
             }
@@ -257,7 +287,7 @@ export default function App() {
         <div className="bg-stone-900 px-5 pt-8 pb-6 sticky top-0 z-40 rounded-b-[2rem] shadow-xl text-white">
            <div className="flex justify-between items-start mb-5">
              <div><h1 className="text-2xl font-black flex items-center gap-2"><ShieldCheck className="text-orange-500"/> Yönetici Merkezi</h1><p className="text-stone-400 text-sm mt-1">Tüm analizler ve kontrol sizde.</p></div>
-             <button onClick={handleLogout} className="p-3 bg-stone-800 rounded-full text-stone-300 hover:text-white hover:bg-red-500 transition-colors shadow-lg"><LogOut size={18}/></button>
+             <button onClick={handleLogout} className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-black hover:bg-red-600 transition-colors shadow-lg"><Power size={14}/> ÇIKIŞ</button>
            </div>
            <div className="flex gap-2 bg-stone-800 p-1.5 rounded-xl overflow-x-auto no-scrollbar">
               <button onClick={() => setAdminView('dashboard')} className={`flex-1 py-2 px-3 whitespace-nowrap text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${adminView === 'dashboard' ? 'bg-orange-500 text-white shadow-md' : 'text-stone-400 hover:text-white'}`}><TrendingUp size={14}/> Analizler</button>
@@ -297,14 +327,12 @@ export default function App() {
                                 <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase ${s.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{s.status === 'approved' ? 'AKTİF' : 'YASAKLI'}</span>
                              </div>
 
-                             {/* MANUEL KREDİ YÖNETİM ALANI */}
                              <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 mb-4">
                                 <div className="flex justify-between items-center mb-3">
                                     <span className="text-xs font-black text-stone-600 flex items-center gap-1 uppercase tracking-wider"><Coins size={14} className="text-orange-500"/> Kredi Kontrolü</span>
                                     <span className="font-black text-2xl text-stone-800">{s.orderCredit} <span className="text-[10px] text-stone-400 font-bold uppercase">Hakkı</span></span>
                                 </div>
                                 
-                                {/* Ekleme Butonları (+) */}
                                 <div className="flex gap-1.5 mb-2">
                                     <button onClick={() => updateSellerCredit(s.id, 1)} className="flex-1 py-2 bg-green-50 border border-green-200 text-green-700 hover:bg-green-500 hover:text-white rounded-xl text-xs font-black transition-colors">+1</button>
                                     <button onClick={() => updateSellerCredit(s.id, 10)} className="flex-1 py-2 bg-green-50 border border-green-200 text-green-700 hover:bg-green-500 hover:text-white rounded-xl text-xs font-black transition-colors">+10</button>
@@ -312,7 +340,6 @@ export default function App() {
                                     <button onClick={() => updateSellerCredit(s.id, 50)} className="flex-1 py-2 bg-green-50 border border-green-200 text-green-700 hover:bg-green-500 hover:text-white rounded-xl text-xs font-black transition-colors">+50</button>
                                 </div>
 
-                                {/* Çıkarma Butonları (-) */}
                                 <div className="flex gap-1.5">
                                     <button onClick={() => updateSellerCredit(s.id, -1)} className="flex-1 py-2 bg-red-50 border border-red-200 text-red-700 hover:bg-red-500 hover:text-white rounded-xl text-xs font-black transition-colors">-1</button>
                                     <button onClick={() => updateSellerCredit(s.id, -10)} className="flex-1 py-2 bg-red-50 border border-red-200 text-red-700 hover:bg-red-500 hover:text-white rounded-xl text-xs font-black transition-colors">-10</button>
@@ -436,7 +463,10 @@ export default function App() {
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-black text-stone-800 tracking-tight cursor-pointer" onClick={()=>setCustomerView('home')}>Tencere<span className="text-orange-500">.tr</span></h1>
             {currentUser ? (
-              <div className="flex items-center gap-2"><span className="text-xs font-bold text-stone-600">{userData?.name?.split(' ')[0]}</span><button onClick={handleLogout} className="p-2 bg-stone-100 rounded-full text-stone-500"><LogOut size={16}/></button></div>
+              <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-stone-600">{userData?.name?.split(' ')[0]}</span>
+                  <button onClick={handleLogout} className="flex items-center gap-1 bg-red-50 text-red-600 border border-red-100 px-3 py-1.5 rounded-full text-[10px] font-black hover:bg-red-500 hover:text-white transition-colors"><Power size={12}/> ÇIKIŞ</button>
+              </div>
             ) : <button onClick={() => setIsAuthModalOpen(true)} className="text-xs font-black text-orange-600 bg-orange-50 px-4 py-2 rounded-full border border-orange-100 flex items-center gap-1"><LogIn size={14}/> Giriş Yap</button>}
           </div>
           {customerView === 'home' && (
@@ -497,8 +527,15 @@ export default function App() {
                 <div className="bg-white rounded-[2rem] p-6 shadow-sm border mb-6 relative overflow-hidden">
                     {activeSellerProfile.logoUrl && <img src={activeSellerProfile.logoUrl} className="absolute right-6 top-6 w-16 h-16 rounded-full border-4 border-white shadow-md object-cover" />}
                     <h2 className="text-2xl font-black text-stone-800 mb-1 pr-20">{activeSellerProfile.brandName} {!activeSellerProfile.isOpen && <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded ml-2 align-middle">Kapalı</span>}</h2>
-                    <p className="text-stone-500 text-sm flex items-center gap-1 mb-2"><MapPin size={14}/> {activeSellerProfile.district}, {activeSellerProfile.neighborhood}</p>
-                    <p className="text-stone-500 text-xs flex items-center gap-1 mb-4"><Clock size={12}/> {activeSellerProfile.workingHours || '08:00 - 20:00'}</p>
+                    <p className="text-stone-500 text-sm flex items-center gap-1 mb-1"><MapPin size={14}/> {activeSellerProfile.district}, {activeSellerProfile.neighborhood}</p>
+                    
+                    {activeSellerProfile.location && (
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${activeSellerProfile.location.lat},${activeSellerProfile.location.lng}`} target="_blank" rel="noreferrer" className="mb-4 bg-blue-50 text-blue-600 font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-2 w-max shadow-sm border border-blue-100 hover:bg-blue-500 hover:text-white transition-colors">
+                            <Map size={14}/> Yol Tarifi Al
+                        </a>
+                    )}
+                    
+                    <p className="text-stone-500 text-xs flex items-center gap-1 mb-4 mt-2"><Clock size={12}/> {activeSellerProfile.workingHours || '08:00 - 20:00'}</p>
                     <div className="bg-stone-50 p-4 rounded-2xl border"><p className="text-sm font-medium text-stone-600 italic">"{activeSellerProfile.description}"</p></div>
                 </div>
                 <h3 className="font-black text-lg text-stone-800 mb-4 flex items-center gap-2"><Package className="text-orange-500"/> Menü</h3>
@@ -557,15 +594,24 @@ export default function App() {
                   )}
                   {isApplying && (
                      <div className="bg-white rounded-[1.5rem] border p-6 shadow-xl mt-6">
-                        <div className="flex justify-between items-center mb-4"><h3 className="font-black text-lg">Mağaza Bilgileri</h3><button onClick={() => setIsApplying(false)}><X size={20}/></button></div>
+                        <div className="flex justify-between items-center mb-4"><h3 className="font-black text-lg">Mağaza Bilgileri</h3><button onClick={() => { setIsApplying(false); setRegisterLocation(null); }}><X size={20}/></button></div>
                         <form onSubmit={handleBecomeSeller} className="space-y-4">
-                          <input name="brandName" required placeholder="Markanız (Örn: Ayşe'nin Mutfağı)" className="w-full bg-stone-50 border rounded-xl p-3 text-sm font-medium" />
+                          <div>
+                              <input name="brandName" required placeholder="Markanız (Örn: Ayşe'nin Mutfağı)" className="w-full bg-stone-50 border rounded-xl p-3 text-sm font-medium" />
+                              <p className="text-[10px] text-red-500 font-bold mt-1 px-1">⚠️ DİKKAT: Dükkan isminizi belirledikten sonra 60 gün boyunca değiştiremezsiniz.</p>
+                          </div>
+                          
                           <div className="flex gap-2">
                               <select name="city" required onChange={handleCityChange} className="w-1/2 bg-stone-50 border rounded-xl p-3 text-sm font-medium"><option value="">İl Seç</option>{apiCities.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
                               <select name="district" required className="w-1/2 bg-stone-50 border rounded-xl p-3 text-sm font-medium disabled:opacity-50" disabled={!apiDistricts.length}><option value="">İlçe Seç</option>{apiDistricts.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}</select>
                           </div>
                           <input name="neighborhood" required placeholder="Mahalle" className="w-full bg-stone-50 border rounded-xl p-3 text-sm font-medium" />
-                          <textarea name="address" required placeholder="Açık Adres" className="w-full bg-stone-50 border rounded-xl p-3 text-sm font-medium resize-none"></textarea>
+                          <textarea name="address" required placeholder="Açık Adres (Sokak, Bina No, Kat)" className="w-full bg-stone-50 border rounded-xl p-3 text-sm font-medium resize-none"></textarea>
+                          
+                          <button type="button" onClick={handleGetRegisterLocation} className={`w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border ${registerLocation ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
+                             <MapPin size={18}/> {registerLocation ? 'Harita Konumu Eklendi (Değiştir)' : 'Müşteriler İçin Harita Konumunu Ekle'}
+                          </button>
+
                           <textarea name="description" required placeholder="Kısa Açıklama" rows="2" className="w-full bg-stone-50 border rounded-xl p-3 text-sm font-medium resize-none"></textarea>
                           <select name="deliveryMethod" className="w-full bg-stone-50 border rounded-xl p-3 text-sm font-medium"><option value="both">Hem Gel-Al Hem Eve Teslim</option><option value="pickup">Sadece Gel-Al</option></select>
                           <button type="submit" className="w-full bg-stone-900 text-white font-black py-4 rounded-xl">Kayıt Ol ve Başla!</button>
@@ -604,8 +650,18 @@ export default function App() {
   // ============================================================================
   const renderSellerApp = () => {
     let currentSeller = currentUser ? db.sellers.find(s => s.userId === currentUser.uid) : null;
-    if (!currentSeller) return <div className="p-10 text-center">Satıcı profili bulunamadı. Lütfen Müşteri panelinden profil oluşturun.</div>;
-    if (currentSeller.status === 'banned') return <div className="p-10 flex flex-col items-center justify-center h-screen bg-stone-900 text-white text-center"><Ban size={64} className="text-red-500 mb-4"/><h2 className="text-2xl font-black mb-2">Dükkanınız Yasaklandı</h2><p className="text-stone-400">Kurallara aykırı hareket ettiğiniz için dükkanınız yönetici tarafından kapatılmıştır.</p></div>;
+    
+    // HATA DÜZELTMESİ: EĞER KULLANICININ SATICI PROFİLİ YOKSA ÇIKIŞ YAPABİLSİN.
+    if (!currentSeller) return (
+        <div className="p-10 flex flex-col items-center justify-center min-h-screen bg-stone-900 text-white text-center">
+            <Store size={64} className="text-stone-700 mb-4"/>
+            <h2 className="text-xl font-black mb-2">Satıcı Profili Bulunamadı</h2>
+            <p className="text-stone-400 mb-8 text-sm">Satıcı paneline erişmek için önce müşteri panelinden bir dükkan oluşturmalısınız.</p>
+            <button onClick={handleLogout} className="flex items-center gap-2 bg-red-500 text-white px-6 py-3 rounded-xl text-sm font-black hover:bg-red-600 transition-colors shadow-lg"><Power size={16}/> HESAPTAN ÇIKIŞ YAP</button>
+        </div>
+    );
+    
+    if (currentSeller.status === 'banned') return <div className="p-10 flex flex-col items-center justify-center min-h-screen bg-stone-900 text-white text-center"><Ban size={64} className="text-red-500 mb-4"/><h2 className="text-2xl font-black mb-2">Dükkanınız Yasaklandı</h2><p className="text-stone-400">Kurallara aykırı hareket ettiğiniz için dükkanınız yönetici tarafından kapatılmıştır.</p></div>;
 
     const sellerOrders = db.orders.filter(o => o.sellerId === currentSeller.id);
     const sellerProducts = db.products.filter(p => p.sellerId === currentSeller.id);
@@ -668,8 +724,26 @@ export default function App() {
                 showToast(`Güvenlik: İsminizi değiştirmek için ${daysLeft} gün daha beklemelisiniz!`, "error"); return;
             } else { finalLastChangeDate = now; }
         }
-        const updatedSellers = db.sellers.map(s => s.id === currentSeller.id ? { ...s, brandName: newBrandName, address: formData.get('address'), description: formData.get('description'), workingHours: formData.get('workingHours'), logoUrl: formData.get('logoUrl'), lastBrandNameChange: finalLastChangeDate } : s);
-        api.saveDb({ ...db, sellers: updatedSellers }); showToast("Mağaza ayarları güncellendi!"); setSellerView('dashboard');
+        
+        const updatedSellers = db.sellers.map(s => {
+            if (s.id === currentSeller.id) {
+                return { 
+                    ...s, 
+                    brandName: newBrandName, 
+                    city: formData.get('city'),
+                    address: formData.get('address'), 
+                    description: formData.get('description'), 
+                    workingHours: formData.get('workingHours'), 
+                    logoUrl: formData.get('logoUrl'), 
+                    lastBrandNameChange: finalLastChangeDate 
+                };
+            }
+            return s;
+        });
+        
+        api.saveDb({ ...db, sellers: updatedSellers }); 
+        showToast("Mağaza ayarları güncellendi!"); 
+        setSellerView('dashboard');
     };
 
     return (
@@ -680,7 +754,10 @@ export default function App() {
                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-black shadow-md">{currentSeller.brandName.substring(0,2).toUpperCase()}</div>
                <div><h1 className="text-lg font-black text-white">Mağazam</h1><p className="text-stone-400 text-xs">{currentSeller.brandName}</p></div>
             </div>
-            <button className="border border-orange-500/30 text-orange-500 text-[10px] font-black px-2 py-1 rounded bg-orange-500/10">TEST MODU</button>
+            <div className="flex items-center gap-2">
+                <button className="border border-orange-500/30 text-orange-500 text-[10px] font-black px-2 py-1 rounded bg-orange-500/10">TEST MODU</button>
+                <button onClick={handleLogout} className="flex items-center gap-1 bg-stone-800 text-stone-300 border border-stone-700 px-3 py-1.5 rounded-full text-[10px] font-black hover:bg-red-500 hover:text-white transition-colors"><Power size={12}/> ÇIKIŞ</button>
+            </div>
           </div>
         </div>
 
@@ -688,7 +765,7 @@ export default function App() {
           {sellerView === 'dashboard' && (
             <div className="space-y-6 animate-in fade-in">
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-[2rem] p-6 shadow-xl flex justify-between items-center relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 opacity-20"><CreditCard size={100}/></div>
+                <div className="absolute -right-4 -bottom-4 opacity-20"><CreditCard size={100}/></div>
                 <div className="relative z-10">
                    <h3 className="text-orange-100 font-bold mb-1 text-xs tracking-wider uppercase">Kalan Sipariş Kredisi</h3>
                    <div className="text-5xl font-black text-white">{currentSeller.orderCredit}</div>
@@ -804,6 +881,15 @@ export default function App() {
                            <div className="flex-1"><label className="text-[10px] text-stone-500 font-black uppercase tracking-wider block mb-1">LOGO URL (OPSİYONEL)</label><input name="logoUrl" defaultValue={currentSeller.logoUrl || `https://ui-avatars.com/api/?name=${currentSeller.brandName.substring(0,2)}`} className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-lg text-stone-300 text-sm outline-none"/></div>
                         </div>
                         <div><label className="text-[10px] text-stone-500 font-black uppercase tracking-wider block mb-2">MAĞAZA / MARKA ADI</label><input name="brandName" defaultValue={currentSeller.brandName} className="w-full bg-stone-950 border border-stone-800 p-3 rounded-xl text-white font-bold outline-none" required/></div>
+                        
+                        <div>
+                            <label className="text-[10px] text-stone-500 font-black uppercase tracking-wider block mb-2">İL / ŞEHİR</label>
+                            <select name="city" defaultValue={currentSeller.city} className="w-full bg-stone-950 border border-stone-800 rounded-xl p-3 text-white font-bold outline-none">
+                                <option value={currentSeller.city}>{currentSeller.city}</option>
+                                {apiCities.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            </select>
+                        </div>
+
                         <div><label className="text-[10px] text-stone-500 font-black uppercase tracking-wider block mb-2">ÇALIŞMA SAATLERİ</label><div className="relative"><Clock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500"/><input name="workingHours" defaultValue={currentSeller.workingHours || '08:00 - 19:00'} className="w-full bg-stone-950 border border-stone-800 p-3 pl-10 rounded-xl text-white font-bold outline-none" required/></div></div>
                         <div><label className="text-[10px] text-stone-500 font-black uppercase tracking-wider block mb-2">SLOGAN / AÇIKLAMA</label><textarea name="description" rows="2" defaultValue={currentSeller.description} className="w-full bg-stone-950 border border-stone-800 p-3 rounded-xl text-white font-medium resize-none outline-none" required></textarea><p className="text-[9px] text-stone-600 mt-1">Bu alan müşteri profilinize girdiğinde en üstte görünür.</p></div>
                         <div><label className="text-[10px] text-stone-500 font-black uppercase tracking-wider block mb-2">TAM ADRES (AÇIK ADRES)</label><textarea name="address" rows="2" defaultValue={currentSeller.address} className="w-full bg-stone-950 border border-stone-800 p-3 rounded-xl text-white font-medium resize-none outline-none" required></textarea></div>
